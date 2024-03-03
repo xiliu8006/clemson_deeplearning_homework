@@ -11,6 +11,6 @@ python train.py $DATAPATH
 
 # Part 2 testing, The default model path is s2vt_model.pth in current PythonPath
 ```
-./hw2_seq2seq.sh $TESTDATAPATH $OUTPUT_TXT
+bash ./hw2_seq2seq.sh $TESTDATAPATH $OUTPUT_TXT
 ```
 # the total training time should be less than 1 mins at RTX 4090
