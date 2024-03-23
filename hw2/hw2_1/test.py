@@ -10,8 +10,6 @@ if __name__ == "__main__":
     opt['word2index'] = './my_word2index.json'
     video_dataset_test = VideoCaptioningDataset(opt)
 
-
-
     opt['video_fea_dim'] = 4096
     opt['embed_dim'] = 500
     opt['vocab_len'] = 2884
