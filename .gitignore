@@ -3,3 +3,7 @@ DL_HW_2/runs
 
 hw2/__pycache__/
 hw2/hw2_1/__pycache__/
+
+hw4/train_*
+hw4/cifar10/
+cifar10/
