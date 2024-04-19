@@ -6,11 +6,12 @@ from torch import nn
 from torch.autograd import Variable
 from pytorch_gan_metrics import get_inception_score
 from tqdm import tqdm
+import random
 import os
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print("Using device:", device)
-batch_size = 64
+batch_size = 128
 
 class WGAN_Generator(nn.Module):
     def __init__(self): 
@@ -96,11 +97,9 @@ def train(generator, discriminator, train_dataloader, learning_rate = 0.00005, e
             gen_loss.backward()
             optim_generator.step()
 
-        # compute inception score and samples every epoch
-        z = Variable(torch.randn(800, 100, 1, 1)).to(device)
+        z = Variable(torch.randn(1000, 100, 1, 1)).to(device)
         samples = generator(z)
 
-        # normalize to [0, 1]
         samples = samples.mul(0.5).add(0.5)
         
         assert 0 <= samples.min() and samples.max() <= 1
@@ -114,14 +113,25 @@ def train(generator, discriminator, train_dataloader, learning_rate = 0.00005, e
 
     inception_score_file.close()
 
-def generate_images(generator):
-    z = torch.randn(batch_size, 100, 1, 1).to(device)
-    samples = generator(z)
-    samples = samples.mul(0.5).add(0.5)
-    samples = samples.data.cpu()
-    grid = utils.make_grid(samples)
-    print("Grid of 8x8 images saved to 'dcgan_generated_images.png'.")
-    utils.save_image(grid, 'dcgan_generated_images.png')
+def generate_images(generator, batch_size=128, num_infer = 100):
+    inception_scores = []
+    samples_list = []
+    for i in range(num_infer):
+        z = torch.randn(batch_size, 100, 1, 1).to(device)
+        samples = generator(z)
+        samples = samples.mul(0.5).add(0.5)
+        inception_score, inception_score_std = get_inception_score(samples)
+        print(inception_score)
+        inception_scores.append(inception_score)
+        samples_list.append(samples)
+
+    top_scores, top_indices = torch.topk(torch.tensor(inception_scores), k=10)
+    samples = samples_list[top_indices[0]]
+    random_indices = random.sample(range(samples.size(0)), 10)
+    samples = samples[random_indices].data.cpu()
+    grid = utils.make_grid(samples, nrow=5)
+    print(top_scores)
+    utils.save_image(grid, 'wgan_generated_images_top1.png')
 
 def load_model(model, model_filename): 
     model.load_state_dict(torch.load(model_filename))
@@ -133,22 +143,18 @@ if __name__ == "__main__":
     torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
     train_CIFAR10_set = torchvision.datasets.CIFAR10(root='./cifar10/', train=True, download=True, transform=transform)
-    test_CIFAR10_set = torchvision.datasets.CIFAR10(root='./cifar10/', train=False, download=True, transform=transform)
-
     train_CIFAR10_dataloader = DataLoader(train_CIFAR10_set, batch_size=batch_size, shuffle=True, drop_last=True)
-    test_CIFAR10_dataloader = DataLoader(test_CIFAR10_set, batch_size=batch_size, shuffle=True, drop_last=True)
 
     WGAN_generator = WGAN_Generator()
     WGAN_discriminator = WGAN_Discriminator()
     WGAN_generator.to(device)
     WGAN_discriminator.to(device)
-    train(WGAN_generator, WGAN_discriminator, train_CIFAR10_dataloader)
-    torch.save(WGAN_generator.state_dict(), 'WGAN_generator.pkl')
-    torch.save(WGAN_discriminator.state_dict(), 'WGAN_discriminator.pkl')
+    # train(WGAN_generator, WGAN_discriminator, train_CIFAR10_dataloader)
+    # torch.save(WGAN_generator.state_dict(), 'WGAN_generator.pkl')
+    # torch.save(WGAN_discriminator.state_dict(), 'WGAN_discriminator.pkl')
 
     # load trained model and generate sample images
     # print("loading WGAN model...")
-    # load_model(WGAN_generator, 'WGAN_generator.pkl')
-    # load_model(WGAN_discriminator, 'WGAN_discriminator.pkl')
-
-    # generate_images(WGAN_generator)
+    load_model(WGAN_generator, 'WGAN_generator.pkl')
+    load_model(WGAN_discriminator, 'WGAN_discriminator.pkl')
+    generate_images(WGAN_generator)

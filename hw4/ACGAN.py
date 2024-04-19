@@ -7,11 +7,12 @@ from torch.autograd import Variable
 from pytorch_gan_metrics import get_inception_score
 from tqdm import tqdm
 import numpy as np
+import random
 import os
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print("Using device:", device)
-batch_size = 64
+batch_size = 128
 
 
 class ACGAN_Generator(nn.Module):
@@ -86,25 +87,20 @@ def train(generator, discriminator, train_dataloader, learning_rate=0.0002, epoc
             real_images = Variable(images.type(torch.cuda.FloatTensor)).to(device)
             real_labels = Variable(labels.type(torch.cuda.LongTensor)).to(device)
 
-            # adversarial ground truth
             fake = torch.zeros(batch_size).to(device)
             valid = torch.ones(batch_size).to(device)
 
-            ### train generator
             optim_generator.zero_grad()
             z = Variable(torch.cuda.FloatTensor(np.random.normal(0, 1, (batch_size, 100))))
             generated_labels = Variable(torch.cuda.LongTensor(np.random.randint(0, 10, batch_size)))
 
-            # generate image batch
             generated_images = generator(z, generated_labels)
 
-            # compute generator loss, optimize generator
             validity, predicted_label = discriminator(generated_images)
             gen_loss = 0.5 * (source_criterion(validity, valid.unsqueeze(1)) + class_criterion(predicted_label, generated_labels))
             gen_loss.backward()
             optim_generator.step()
 
-            ### train discriminator
             optim_discriminator.zero_grad()
 
             # compute real images loss
@@ -120,7 +116,6 @@ def train(generator, discriminator, train_dataloader, learning_rate=0.0002, epoc
             disc_loss.backward()
             optim_discriminator.step()
 
-        # compute inception score and samples every epoch
         z = Variable(torch.cuda.FloatTensor(np.random.normal(0, 1, (batch_size, 100))))
         generated_labels = Variable(torch.cuda.LongTensor(np.random.randint(0, 10, batch_size)))
         samples = generator(z, generated_labels)
@@ -132,13 +127,36 @@ def train(generator, discriminator, train_dataloader, learning_rate=0.0002, epoc
         inception_score, inception_score_std = get_inception_score(samples)
         print("epoch: " + str(epoch) + ', inception score: ' + str(round(inception_score, 2)) + ' ± ' + str(round(inception_score_std, 2)))
 
-        samples = samples[:64].data.cpu()
+        samples = samples.data.cpu()
         utils.save_image(samples, 'train_generated_images_acgan_fake/epoch_{}.png'.format(str(epoch)))
         utils.save_image(real_images, 'train_generated_images_acgan_real/epoch_{}.png'.format(str(epoch)))
         
         inception_score_file.write(str(epoch) + ', ' + str(round(inception_score, 2)) + '\n')
 
     inception_score_file.close()
+
+def generate_images(generator, data_loader, batch_size=128):
+    inception_scores = []
+    samples_list = []
+    for images, labels in data_loader:
+        z = torch.randn(batch_size, 100).to(device)
+        samples = generator(z, labels.to(device))
+        samples = samples.mul(0.5).add(0.5)
+        inception_score, inception_score_std = get_inception_score(samples)
+        print(inception_score)
+        inception_scores.append(inception_score)
+        samples_list.append(samples)
+
+    top_scores, top_indices = torch.topk(torch.tensor(inception_scores), k=10)
+    samples = samples_list[top_indices[0]]
+    random_indices = random.sample(range(samples.size(0)), 10)
+    samples = samples[random_indices].data.cpu()
+    grid = utils.make_grid(samples, nrow=5)
+    print(top_scores)
+    utils.save_image(grid, 'ACGAN_generated_images_top1.png')
+
+def load_model(model, model_filename): 
+    model.load_state_dict(torch.load(model_filename))
 
 if __name__ == "__main__":
     transform = torchvision.transforms.Compose([
@@ -156,6 +174,9 @@ if __name__ == "__main__":
     ACGAN_discriminator = ACGAN_Discriminator()
     ACGAN_generator.to(device)
     ACGAN_discriminator.to(device)
-    train(ACGAN_generator, ACGAN_discriminator, train_CIFAR10_dataloader)
-    torch.save(ACGAN_generator.state_dict(), 'ACGAN_generator.pkl')
-    torch.save(ACGAN_discriminator.state_dict(), 'ACGAN_discriminator.pkl')
+    # train(ACGAN_generator, ACGAN_discriminator, train_CIFAR10_dataloader)
+    # torch.save(ACGAN_generator.state_dict(), 'ACGAN_generator.pkl')
+    # torch.save(ACGAN_discriminator.state_dict(), 'ACGAN_discriminator.pkl')
+    load_model(ACGAN_generator, 'ACGAN_generator.pkl')
+    load_model(ACGAN_discriminator, 'ACGAN_discriminator.pkl')
+    generate_images(ACGAN_generator, test_CIFAR10_dataloader)
