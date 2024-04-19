@@ -116,8 +116,9 @@ def train(generator, discriminator, train_dataloader, learning_rate=0.0002, epoc
             disc_loss.backward()
             optim_discriminator.step()
 
-        z = Variable(torch.cuda.FloatTensor(np.random.normal(0, 1, (batch_size, 100))))
-        generated_labels = Variable(torch.cuda.LongTensor(np.random.randint(0, 10, batch_size)))
+
+        z = Variable(torch.cuda.FloatTensor(np.random.normal(0, 1, (1000, 100))))
+        generated_labels = Variable(torch.cuda.LongTensor(np.random.randint(0, 10, 1000)))
         samples = generator(z, generated_labels)
 
         # normalize to [0, 1]
@@ -174,9 +175,9 @@ if __name__ == "__main__":
     ACGAN_discriminator = ACGAN_Discriminator()
     ACGAN_generator.to(device)
     ACGAN_discriminator.to(device)
-    # train(ACGAN_generator, ACGAN_discriminator, train_CIFAR10_dataloader)
-    # torch.save(ACGAN_generator.state_dict(), 'ACGAN_generator.pkl')
-    # torch.save(ACGAN_discriminator.state_dict(), 'ACGAN_discriminator.pkl')
-    load_model(ACGAN_generator, 'ACGAN_generator.pkl')
-    load_model(ACGAN_discriminator, 'ACGAN_discriminator.pkl')
-    generate_images(ACGAN_generator, test_CIFAR10_dataloader)
+    train(ACGAN_generator, ACGAN_discriminator, train_CIFAR10_dataloader)
+    torch.save(ACGAN_generator.state_dict(), 'ACGAN_generator.pkl')
+    torch.save(ACGAN_discriminator.state_dict(), 'ACGAN_discriminator.pkl')
+    # load_model(ACGAN_generator, 'ACGAN_generator.pkl')
+    # load_model(ACGAN_discriminator, 'ACGAN_discriminator.pkl')
+    # generate_images(ACGAN_generator, test_CIFAR10_dataloader)
