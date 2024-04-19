@@ -59,9 +59,6 @@ def train(generator, discriminator, train_dataloader, learning_rate = 0.00005, e
     optim_generator = torch.optim.RMSprop(generator.parameters(), lr=learning_rate)
     optim_discriminator = torch.optim.RMSprop(discriminator.parameters(), lr=learning_rate)
     weight_cliping_limit = 0.01
-
-    if not os.path.exists('train_generated_images_WGAN/'): 
-        os.makedirs('train_generated_images_WGAN')
         
     inception_score_file = open("inception_score_WGAN.csv", "w")
     inception_score_file.write('epoch, inception_score \n')

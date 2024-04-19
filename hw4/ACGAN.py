@@ -73,10 +73,6 @@ def train(generator, discriminator, train_dataloader, learning_rate=0.0002, epoc
     optim_generator = torch.optim.Adam(generator.parameters(), lr=learning_rate, betas=(0.5, 0.999))
     optim_discriminator = torch.optim.Adam(discriminator.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 
-    if not os.path.exists('train_generated_images_acgan_real/'): 
-        os.makedirs('train_generated_images_acgan_real')
-    if not os.path.exists('train_generated_images_acgan_fake/'): 
-        os.makedirs('train_generated_images_acgan_fake')
         
     inception_score_file = open("inception_score_acgan.csv", "w")
     inception_score_file.write('epoch, inception_score \n')
@@ -175,9 +171,9 @@ if __name__ == "__main__":
     ACGAN_discriminator = ACGAN_Discriminator()
     ACGAN_generator.to(device)
     ACGAN_discriminator.to(device)
-    train(ACGAN_generator, ACGAN_discriminator, train_CIFAR10_dataloader)
-    torch.save(ACGAN_generator.state_dict(), 'ACGAN_generator.pkl')
-    torch.save(ACGAN_discriminator.state_dict(), 'ACGAN_discriminator.pkl')
-    # load_model(ACGAN_generator, 'ACGAN_generator.pkl')
-    # load_model(ACGAN_discriminator, 'ACGAN_discriminator.pkl')
-    # generate_images(ACGAN_generator, test_CIFAR10_dataloader)
+    # train(ACGAN_generator, ACGAN_discriminator, train_CIFAR10_dataloader)
+    # torch.save(ACGAN_generator.state_dict(), 'ACGAN_generator.pkl')
+    # torch.save(ACGAN_discriminator.state_dict(), 'ACGAN_discriminator.pkl')
+    load_model(ACGAN_generator, 'ACGAN_generator.pkl')
+    load_model(ACGAN_discriminator, 'ACGAN_discriminator.pkl')
+    generate_images(ACGAN_generator, test_CIFAR10_dataloader)
